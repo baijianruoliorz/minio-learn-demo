@@ -3,13 +3,15 @@ from minio import Minio
 from datetime import timedelta
 from minio.error import ResponseError
 #presigned URL可以有一个过期时间，默认是7天
+# 图片视频可以下载 ,但是带中文的文档中文会乱码.
+# 视频返回url也是秒级
 minioClient = Minio('ggtaiwanmini.117503445.top:9000',
                   access_key='admin',
                   secret_key='admin123',
                   secure=False)
 # presigned get object URL for object name, expires in 2 days.
 try:
-    print(minioClient.presigned_get_object('liqiqi', 'min-io.txt', expires=timedelta(days=2)))
+    print(minioClient.presigned_get_object('liqiqi', 'hahaha.mp4', expires=timedelta(days=2)))
 # Response error is still possible since internally presigned does get bucket location.
 except ResponseError as err:
     print(err)

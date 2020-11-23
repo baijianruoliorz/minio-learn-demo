@@ -1,0 +1,414 @@
+创建一个索引
+Put命令:
+#创建 数据库名称(index):test  (类型名)type:test1 文档ID
+PUT /test1/type1/1
+{
+  "name": "liqiqiorz",
+  "age": 3
+}
+
+数据类型:
+字符串类型: text,keyword
+数值类型 long integer short byte double float half...
+日期类型:date
+布尔值类型:boolean
+二进制类型:binary
+and so on...
+
+指定字段类型:
+"elasticsearch的建库语句":
+PUT /test2
+{
+  "mappings":{
+    "properties":{
+      "name":{
+        "type": "long"
+      },
+       "age":{
+         "type":"long"
+       },
+        "birthday":{
+          "type":"date"
+        }
+    }
+  }
+}
+
+获取数据库信息:
+#这个测试好像有点问题 QAQ
+GET test2(如果写的表就得到表的信息,如果写文档就表示文档的信息
+
+由于elasticsearch8之后即将舍弃type
+所以直接
+put /test3/_doc/1这样创建文档就行了
+
+PUT /test3/qqq/1
+{
+  "name": "liqiqiorz",
+  "age": 15,
+  "birth": "2002-09-27"
+}
+好像就可以默认配置字段类型了呢
+
+修改一个数据:可以直接将修改的内容传进去,比如
+PUT /test1/type1/1
+{
+  "name": "liqiqiorz",
+  "age": 4
+}
+修改了age后可以直接被接受,然后返回的version变成2:表示已经被修改了一次
+但是漏掉数据那个数据就没了
+
+现在的方法:
+POST /test1/type1/1/_update
+{
+   "doc"{
+      "name": "baijianruoliorz"
+   }
+}
+即可,也会让version的值加一
+
+DELETE test1 (直接删除一个库
+
+#添加一条数据
+  
+ PUT /test/user/1
+{
+   "name": "liqiqi",
+   "age" : 23,
+   "desc": "热爱技术",
+   "tags":["彩币","fw","estj"]
+}
+
+#获取数据
+GET qaq/user/3
+ 
+传统put方式更新:
+ PUT /test/user/1
+{
+   "name": "liqiqiorz",
+   "age" : 23,
+   "desc": "热爱技术",
+   "tags":["彩币","fw","estj"]
+}  字段容易丢失且不高效
+POST /test/user/1/_update
+{
+  "doc":{
+     "name": "baijianruosto"
+  }
+} 高效,字段不丢失去
+
+简单的搜索
+GET test/user/1
+复杂搜索:
+GET test/user/_search?q=name:liqiqi  精确匹配,
+根据默认的映射规则进行基本查询
+
+复杂操作搜索 select 排序 分页 高亮
+:出现多条查询结果:则看 _score这个字段分数越高表示匹配度越高
+
+查询带query:
+#name只要带li的都会被查出来
+GET test/user/_search
+{
+  "query": {
+    "name": "li"
+  }
+}
+hits 命中!可以看到索引和文档信息
+QAQ
+
+看到图像就可以获得谁最匹配
+
+
+查 年龄 和名字两个值的匹配
+输出结果不想要这么多
+GET test/user/_search
+{
+  "query": {
+    "name": "li"
+  },
+   "_source":["name","desc"] #结果的过滤
+}
+
+排序 sort
+#表示按照年龄顺序排
+GET test/user/_search
+{
+  "query": {
+    "name": "li"
+  },
+   "sort":[
+   {
+    "age":{
+      "order": "asc"
+    }
+   }
+   ]
+}
+
+分页查询
+GET test/user/_search
+{
+  "query": {
+    "name": "li"
+  },
+   "sort":[
+   {
+    "age":{
+      "order": "asc"
+    }
+   }
+   ],
+   "from": 0,  #分页的两个参数 就是c:从第几个开始 l
+   "size": 1
+}
+
+
+匹配  (多条件匹配,所有条件都要符合
+GET test/user/_search
+{
+  "query": {
+    "bool": {
+      "must":[
+         {
+         "match":{
+           "name": "liqiqi"
+         }
+         },
+         {
+         "match": {
+           "age": 3
+         }
+         }
+      ]
+    }
+  }
+}
+
+should(or) 只有满足一个条件就可以了:把上面的must改成should
+
+must_not:查询不是什么什么条件的(not)
+
+过滤器:
+GET test/user/_search
+{
+  "query": {
+    "bool": {
+      "must":[
+         {
+         "match":{
+           "name": "liqiqi"
+         }
+         }
+      ],
+      "filter:"{
+        "range":{
+          "age":{
+             "gte": 10,       #大于10小于20
+             "lte": 20
+             # "lt":10 小于
+             # "gt" 大于
+             # "gte" 大于等于
+             # "lte" 小于等于
+          }
+        }
+      }
+    }
+  }
+}
+
+匹配多个条件
+
+#只要tags包含 男 就可以查出来,即使是词组
+GET test/user/_search
+{
+  "query":{
+     "match":{
+      "tags": "男"
+     }
+  }
+}
+#男 技术 用空格分开即可
+GET test/user/_search
+{
+  "query":{
+     "match":{
+      "tags": "男 技术"
+     }
+  }
+}
+只要满足期中一个结果就可以被查出,可以根据分值来判断
+
+
+精确查询
+term
+根据倒排索引来指定词条进程精确查找的!
+关于分词:
+term 直接查询精确的
+match 会使用分词器解析 西安分析文档,然后再通过分析的分档进行查询!
+
+两个类型
+
+#每个字段的类型
+PUT testdb{
+   "mappings:"{
+     "properties":{
+      "name":{
+        "type": "text"
+      },
+       "desc":{
+       "type":"keyword"
+       }
+     }
+   }
+}
+
+PUT testdb/_doc/1
+{
+   "name": "松冈和爱衣",
+   "desc": "松冈和爱衣结婚了"
+}
+
+PUT testdb/_doc/2
+{
+   "name": "松冈和爱衣111",
+   "desc": "松冈和爱衣结婚了11"
+}
+
+GET _analyze
+{
+  "analyzer": "keyword",
+  "text": "松冈和爱衣"
+}
+
+ki分词器这个插件  docker 不知道怎么装???
+
+#带有 松冈 的就会被查出来
+GET testdb/_search
+{
+  "query":{
+    "term":{
+      "name": "松冈"
+    }
+  }
+}
+
+keyword类型的字段不会被分词器解析
+
+多个值匹配的精确查询
+PUT testdb/_doc/3
+{
+"t1":22,
+"t2":"2020-4-6"
+}
+
+PUT testdb/_doc/4
+{
+"t1":33,
+"t2":"2020-4-7"
+}
+
+#22 33都会被查出来
+GET testdb/_search{
+  "query":{
+  "bool":{
+   "should":[
+   {
+    "term":{
+    "t1": "22"
+    }
+   },
+   {
+    "term":{
+    "t1": "33"
+    }
+   }
+   ]
+  }
+  }
+}
+
+#高亮查询  name会被自动带上em标签
+GET test/user/_search
+{
+   "query":{
+     "match":{
+      "name": "liqiqi"
+     }
+   },
+   "highlight":{
+     "fields":{
+     "name":{}
+     }
+   }
+   }
+
+
+   自定义高亮 red:
+   GET test/user/_search
+{
+   "query":{
+     "match":{
+      "name": "liqiqi"
+     }
+   },
+   "highlight":{
+     "pre_tags": "<p class='key' style='color:red'>",
+     "post_ages": "</p>",
+     "fields": {
+       "name":{}
+     }
+   }
+   }
+#如果接下来新增了字段.那么index会自动更新
+#大概的数据库
+ PUT /video/videoMessage/1
+{
+   "mime" :"233qaq",
+   "file_size": 2,
+   "title": "hello kitty",
+   "content": "this is a hello kitty",
+   "file_url" :"https:",
+   "author": "sandra",
+   "author_avatar": "https",
+   "create_time": 1605762279,
+   "update_time": 1605762666,
+   "thumbnail_url": "https:",
+   "website": "vimeo"
+}
+
+
+
+
+ "query": {
+        "match_all": {},
+        "filter":{
+            "range": {
+                "create_time": {
+                    "gte": "1605733333"  # 大于10小于20
+
+                    # "lt":10 小于
+                    # "gt" 大于
+                    # "gte" 大于等于
+                    # "lte" 小于等于
+                },
+                "update_time":{
+                    "lte": "1605766667"
+                }
+            }
+        }
+    },"size": 10
+
+
+
+
+
+
+ 
+
+
+
+
+
+
